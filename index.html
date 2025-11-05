@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>TasteLog</title>
+  <meta name="description" content="Snel producten beoordelen met foto, cijfer en rebuy-status. Werkt offline.">
+  <meta name="theme-color" content="#0e1117" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <style>
+    :root{
+      --bg1:#0b0c10; --bg2:#0e1117;
+      --panel:#12141a;--panel2:#171a22;--text:#e8ecf1;--muted:#a9b3c1;
+      --accent:#7c5cff;--accent-2:#2dd4bf;
+      --ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--border:#262a36;--chip:#1e2230;
+      --radius:18px;--radius-sm:14px;--shadow:0 14px 36px rgba(0,0,0,.38);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,var(--bg1) 0%,var(--bg2) 100%);color:var(--text);font:18px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    .wrap{max-width:900px;margin:20px auto;padding:0 16px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap}
+    .logo{display:flex;align-items:center;gap:10px}
+    .logo .dot{width:14px;height:14px;border-radius:50%;background:conic-gradient(from 180deg at 50% 50%, var(--accent), var(--accent-2))}
+    h1{font-size: clamp(22px,6vw,28px);margin:0;font-weight:800}
+    .sub{color:var(--muted);font-size:14px}
+    .card{background:linear-gradient(180deg,var(--panel) 0%, var(--panel2) 100%);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card .body{padding:16px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:720px){.row{grid-template-columns:1fr}}
+    label{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
+    input[type="text"], textarea, select{
+      width:100%;padding:14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:#0f1219;color:var(--text);outline:none;font-size:16px
+    }
+    textarea{min-height:110px;resize:vertical}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 16px;border-radius:14px;background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, black));border:none;color:white;font-weight:700;cursor:pointer;font-size:16px;min-height:48px}
+    .btn.secondary{background:#1f2433;border:1px solid var(--border)}
+    .btn.small{padding:10px 12px;min-height:44px;font-size:14px}
+    .btn:active{transform:translateY(1px)}
+    .tabs{display:flex;gap:8px;margin:6px 0 12px;position:sticky;top:0;z-index:5}
+    .tab{flex:1;border:1px solid var(--border);background:#141827;color:var(--text);padding:12px 14px;border-radius:999px;font-weight:800;cursor:pointer;min-height:44px}
+    .tab.active{background:linear-gradient(180deg,var(--accent),color-mix(in oklab, var(--accent) 70%, black)); border-color:transparent}
+    .drop{border:2px dashed #2a3042;border-radius:var(--radius);padding:16px;display:flex;gap:12px;align-items:center;justify-content:center;background:#0e121a;min-height:120px;text-align:center;color:var(--muted)}
+    .thumb{width:100px;height:100px;border-radius:14px;object-fit:cover;border:1px solid var(--border)}
+    .preview{display:flex;align-items:center;gap:12px}
+    .range-wrap{display:flex;align-items:center;gap:12px}
+    input[type=range]{width:100%}
+    .bubble{min-width:42px;text-align:center;background:#1b2030;border:1px solid var(--border);padding:7px 9px;border-radius:12px;color:var(--text);font-weight:800}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+    .toolbar input[type=text]{flex:1;min-width:160px}
+    .counter{margin-left:auto;color:var(--muted);font-size:14px}
+    .list{padding:8px}
+    .item{display:grid;grid-template-columns:100px 1fr auto;gap:12px;align-items:center;padding:10px;border-radius:16px;border:1px solid var(--border);background:#0e1119}
+    .item + .item{margin-top:10px}
+    .item h3{margin:0 0 6px;font-size:18px}
+    .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .badge{padding:5px 9px;border-radius:999px;font-size:13px;border:1px solid var(--border)}
+    .rebuy{background:rgba(34,197,94,.12);color:#8be5ad;border-color:rgba(34,197,94,.35)}
+    .maybe{background:rgba(245,158,11,.12);color:#ffd694;border-color:rgba(245,158,11,.35)}
+    .nobuy{background:rgba(239,68,68,.12);color:#ffb4b4;border-color:rgba(239,68,68,.35)}
+    .rating{font-weight:900}
+    .muted{color:var(--muted)}
+    .empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:16px;margin:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">
+        <div class="dot" aria-hidden="true"></div>
+        <div>
+          <h1>TasteLog</h1>
+          <div class="sub">Snel je indruk van producten opslaan — werkt offline, camera-first.</div>
+        </div>
+      </div>
+      <div class="tools" style="display:flex;gap:8px;flex-wrap:wrap">
+        <label class="btn small secondary" title="Importeer JSON">Import
+          <input id="importFile" type="file" accept="application/json" style="display:none">
+        </label>
+        <button class="btn small secondary" id="exportBtn" title="Exporteer JSON">Export</button>
+        <button class="btn small secondary" id="clearAllBtn" title="Alles wissen">Wissen</button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button id="tabNew" class="tab active" role="tab" aria-controls="viewNew" aria-selected="true">Nieuw</button>
+      <button id="tabList" class="tab" role="tab" aria-controls="viewList" aria-selected="false">Lijst</button>
+    </nav>
+
+    <!-- Nieuw -->
+    <section id="viewNew" class="card" role="tabpanel" aria-labelledby="tabNew">
+      <div class="body">
+        <form id="itemForm">
+          <div class="row" style="margin-bottom:10px">
+            <div>
+              <label for="name">Productnaam *</label>
+              <input id="name" name="name" type="text" required placeholder="bv. Tony's Caramel Zeezout" />
+            </div>
+            <div>
+              <label for="status">Status *</label>
+              <select id="status" name="status" required>
+                <option value="rebuy">Rebuy (zeker opnieuw)</option>
+                <option value="maybe">Not sure (twijfel)</option>
+                <option value="nobuy">Don't buy (niet doen)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row" style="margin-bottom:10px">
+            <div>
+              <label for="rating">Cijfer (1–10)</label>
+              <div class="range-wrap">
+                <input id="rating" name="rating" type="range" min="1" max="10" value="8" step="1" />
+                <output class="bubble" id="ratingOut" for="rating">8</output>
+              </div>
+            </div>
+            <div>
+              <label for="photo">Foto</label>
+              <div class="drop" id="dropArea">
+                <div>
+                  <strong>Tik om camera/galerij</strong>
+                  <div class="muted" style="font-size:13px;margin-top:6px">Wordt automatisch verkleind</div>
+                  <input id="photo" name="photo" type="file" accept="image/*" capture="environment" style="display:none" />
+                </div>
+              </div>
+              <div id="preview" class="preview" style="display:none;margin-top:10px">
+                <img id="thumb" class="thumb" alt="Voorbeeld van geüploade foto" />
+                <button type="button" class="btn small secondary" id="changePhoto">Andere foto</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label for="note">Opmerking</label>
+            <textarea id="note" name="note" placeholder="Smaak, textuur, waar gekocht, prijs, etc."></textarea>
+          </div>
+
+          <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="btn" type="submit">Opslaan</button>
+            <span class="muted" style="font-size:14px">Data blijft lokaal (offline).</span>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Lijst -->
+    <section id="viewList" class="card" role="tabpanel" aria-labelledby="tabList" style="display:none">
+      <div class="body">
+        <div class="toolbar">
+          <input id="search" type="text" placeholder="Zoek op naam of opmerking…" />
+          <select id="filterStatus" aria-label="Filter">
+            <option value="all">Alle statussen</option>
+            <option value="rebuy">Rebuy</option>
+            <option value="maybe">Not sure</option>
+            <option value="nobuy">Don't buy</option>
+          </select>
+          <select id="sortBy" aria-label="Sorteren">
+            <option value="date_desc">Nieuwste eerst</option>
+            <option value="date_asc">Oudste eerst</option>
+            <option value="rating_desc">Hoog cijfer eerst</option>
+            <option value="rating_asc">Laag cijfer eerst</option>
+            <option value="name_asc">Naam A–Z</option>
+          </select>
+          <div class="counter" id="counter">0 items</div>
+        </div>
+        <div id="list" class="list"></div>
+        <div id="empty" class="empty" style="display:none">Nog geen items. Voeg je eerste product toe!</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+  const $ = s => document.querySelector(s);
+  const STORAGE_KEY = 'tastelog_items_v1';
+  const THEME_KEY   = 'tastelog_theme_v1';
+  const save = items => localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  const load = () => { try { const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); return Array.isArray(d)?d:[] } catch { return [] } };
+  const getCSS = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  function statusLabel(v){ return v==='rebuy'?'Rebuy':(v==='maybe'?'Not sure':"Don't buy") }
+  function uid(){ return 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2,8) }
+
+  const defaultTheme = { bg1: getCSS('--bg1')||'#0b0c10', bg2: getCSS('--bg2')||'#0e1117', acc1: getCSS('--accent')||'#7c5cff', acc2: getCSS('--accent-2')||'#2dd4bf' };
+  const saveTheme = t => localStorage.setItem(THEME_KEY, JSON.stringify(t));
+  const loadTheme = () => { try{ return JSON.parse(localStorage.getItem(THEME_KEY)||'null')||defaultTheme }catch{return defaultTheme} };
+  const applyTheme = t => { document.documentElement.style.setProperty('--bg1', t.bg1); document.documentElement.style.setProperty('--bg2', t.bg2); document.documentElement.style.setProperty('--accent', t.acc1); document.documentElement.style.setProperty('--accent-2', t.acc2); };
+
+  async function fileToDataUrl(file){
+    if(!file) return null;
+    const img = new Image();
+    const reader = new FileReader();
+    await new Promise((res,rej)=>{ reader.onload=()=>{img.src=reader.result;res()}; reader.onerror=rej; reader.readAsDataURL(file) });
+    await new Promise((res,rej)=>{ img.onload=()=>res(); img.onerror=rej });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const MAX = 1400;
+    let {width, height} = img;
+    if(width>MAX || height>MAX){ const scale = Math.min(MAX/width, MAX/height); width = Math.round(width*scale); height = Math.round(height*scale) }
+    canvas.width = width; canvas.height = height;
+    ctx.drawImage(img,0,0,width,height);
+    return canvas.toDataURL('image/webp', 0.85);
+  }
+
+  let items = load();
+  let filters = {q:'', status:'all', sort:'date_desc'};
+  let theme = loadTheme(); applyTheme(theme);
+
+  const form = $('#itemForm');
+  const rating = $('#rating');
+  const ratingOut = $('#ratingOut');
+  const photoInput = $('#photo');
+  const dropArea = $('#dropArea');
+  const preview = $('#preview');
+  const thumb = $('#thumb');
+  const changePhotoBtn = $('#changePhoto');
+
+  rating.addEventListener('input', ()=> ratingOut.value = rating.value);
+  dropArea.addEventListener('click', ()=> photoInput.click());
+  changePhotoBtn.addEventListener('click', ()=> photoInput.click());
+  photoInput.addEventListener('change', async (e)=>{
+    const f = e.target.files?.[0];
+    if(f && f.type.startsWith('image/')){
+      const data = await fileToDataUrl(f);
+      preview.style.display = 'flex'; thumb.src = data; thumb.dataset.dataUrl = data;
+    }
+  });
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const name = $('#name').value.trim();
+    const status = $('#status').value;
+    const note = $('#note').value.trim();
+    const rate = parseInt($('#rating').value,10) || 0;
+    if(!name){ $('#name').focus(); return }
+    const imageData = thumb.dataset.dataUrl || null;
+    const item = { id:uid(), name, status, note, rating:rate, imageData, createdAt: Date.now() };
+    items.unshift(item); save(items); render();
+    form.reset(); rating.value=8; ratingOut.value=8; thumb.removeAttribute('data-url'); preview.style.display='none';
+    showView('list');
+  });
+
+  const listEl = $('#list'); const emptyEl = $('#empty'); const counter = $('#counter');
+  function placeholder(text){
+    const acc1 = getCSS('--accent')||'#7c5cff';
+    const acc2 = getCSS('--accent-2')||'#2dd4bf';
+    const initials = text.split(/\s+/).slice(0,2).map(s=>s[0]?.toUpperCase()||'').join('');
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'>
+      <defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='${acc1}'/><stop offset='100%' stop-color='${acc2}'/></linearGradient></defs>
+      <rect width='100%' height='100%' fill='url(#g)'/>
+      <text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='system-ui,Segoe UI,Roboto' font-size='64' fill='white' opacity='0.9'>${initials}</text>
+    </svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  }
+
+  function render(){
+    let view = items.slice();
+    if(filters.q){ const q = filters.q.toLowerCase(); view = view.filter(it => it.name.toLowerCase().includes(q) || (it.note||'').toLowerCase().includes(q)) }
+    if(filters.status!=='all') view = view.filter(it => it.status===filters.status);
+    switch(filters.sort){
+      case 'date_desc': view.sort((a,b)=> b.createdAt - a.createdAt); break;
+      case 'date_asc': view.sort((a,b)=> a.createdAt - b.createdAt); break;
+      case 'rating_desc': view.sort((a,b)=> (b.rating||0)-(a.rating||0)); break;
+      case 'rating_asc': view.sort((a,b)=> (a.rating||0)-(b.rating||0)); break;
+      case 'name_asc': view.sort((a,b)=> a.name.localeCompare(b.name)); break;
+    }
+    counter.textContent = view.length + (view.length===1?' item':' items');
+    listEl.innerHTML = '';
+    if(view.length===0){ emptyEl.style.display='block'; return } else { emptyEl.style.display='none' }
+    for(const it of view){
+      const el = document.createElement('div'); el.className='item'; el.dataset.id=it.id;
+      const img = document.createElement('img'); img.className='thumb'; img.alt='Foto van ' + it.name; img.src = it.imageData || placeholder(it.name);
+      const main = document.createElement('div');
+      const h3 = document.createElement('h3'); h3.textContent = it.name;
+      const meta = document.createElement('div'); meta.className='meta';
+      const rwrap = document.createElement('span'); rwrap.className='badge'; rwrap.textContent = 'Cijfer: ' + (it.rating ?? '–');
+      const st = document.createElement('span'); st.className='badge ' + (it.status==='rebuy'?'rebuy': it.status==='maybe'?'maybe':'nobuy'); st.textContent = statusLabel(it.status);
+      meta.append(rwrap, st);
+      const note = document.createElement('div'); note.className='muted'; note.style.marginTop='4px'; note.textContent = it.note || '';
+      main.append(h3, meta, note);
+      const actions = document.createElement('div'); actions.style.display='flex'; actions.style.gap='8px';
+      const editBtn = document.createElement('button'); editBtn.className='btn small secondary'; editBtn.textContent='Bewerken';
+      const delBtn = document.createElement('button'); delBtn.className='btn small secondary'; delBtn.textContent='Verwijderen';
+      editBtn.addEventListener('click', ()=> startEdit(it.id));
+      delBtn.addEventListener('click', ()=> removeItem(it.id));
+      actions.append(editBtn, delBtn);
+      el.append(img, main, actions);
+      listEl.appendChild(el);
+    }
+  }
+
+  function startEdit(id){
+    const it = items.find(x=>x.id===id); if(!it) return;
+    $('#name').value = it.name; $('#status').value = it.status; $('#note').value = it.note||''; $('#rating').value = it.rating||8; ratingOut.value = it.rating||8;
+    if(it.imageData){ preview.style.display='flex'; thumb.src = it.imageData; thumb.dataset.dataUrl = it.imageData; } else { preview.style.display='none'; thumb.removeAttribute('data-url') }
+    items = items.filter(x=>x.id!==id); save(items); render();
+    showView('new'); window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function removeItem(id){
+    if(!confirm('Verwijderen? Dit kan niet ongedaan worden.')) return;
+    items = items.filter(it=> it.id!==id); save(items); render();
+  }
+
+  $('#search').addEventListener('input', e=>{filters.q = e.target.value; render()});
+  $('#filterStatus').addEventListener('change', e=>{filters.status = e.target.value; render()});
+  $('#sortBy').addEventListener('change', e=>{filters.sort = e.target.value; render()});
+
+  $('#exportBtn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(items, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'tastelog-export.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  });
+  $('#importFile').addEventListener('change', async (e)=>{
+    const f = e.target.files?.[0]; if(!f) return;
+    try{
+      const text = await f.text(); const data = JSON.parse(text);
+      if(!Array.isArray(data)) throw new Error('Ongeldig bestand');
+      const cleaned = data.map(x=>({
+        id: String(x.id||uid()),
+        name: String(x.name||'Zonder naam').slice(0,180),
+        status: ['rebuy','maybe','nobuy'].includes(x.status)? x.status : 'maybe',
+        note: String(x.note||'').slice(0,5000),
+        rating: Math.max(1, Math.min(10, parseInt(x.rating||8,10))),
+        imageData: typeof x.imageData==='string' && x.imageData.startsWith('data:image/')? x.imageData : null,
+        createdAt: Number.isFinite(x.createdAt)? x.createdAt : Date.now()
+      }));
+      items = cleaned.concat(items); save(items); render(); e.target.value='';
+    }catch(err){ alert('Import mislukt: ' + err.message) }
+  });
+  $('#clearAllBtn').addEventListener('click', ()=>{ if(!confirm('Alle items verwijderen?')) return; items = []; save(items); render(); });
+
+  const tabNew = $('#tabNew'), tabList = $('#tabList'), viewNew = $('#viewNew'), viewList = $('#viewList');
+  function showView(which){
+    const isList = which==='list';
+    tabNew.classList.toggle('active', !isList); tabNew.setAttribute('aria-selected', String(!isList));
+    tabList.classList.toggle('active', isList); tabList.setAttribute('aria-selected', String(isList));
+    viewNew.style.display = isList ? 'none' : '';
+    viewList.style.display = isList ? '' : 'none';
+  }
+  tabNew.addEventListener('click', ()=> showView('new'));
+  tabList.addEventListener('click', ()=> showView('list'));
+
+  if('serviceWorker' in navigator && location.protocol === 'https:'){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
+  render();
+  </script>
+</body>
+</html>
